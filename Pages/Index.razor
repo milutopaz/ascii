@@ -1,0 +1,55 @@
+﻿@page "/"
+@using AsciiConverter.Services
+@inject IAsciiConverterService AsciiConverterService
+
+<PageTitle>Converter</PageTitle>
+<div class="container">
+    <h1>Image To ASCII Converter</h1>
+
+    @if (is_processing) 
+    {
+        <p>Processing...</p>
+    }
+
+    @if (!string.IsNullOrEmpty(ascii_output))
+    {
+        <pre class="ascii-output">@ascii_output</pre>
+    }
+    @* <p role="status">Current count: @currentCount</p>
+
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button> *@
+
+    <InputFile OnChange="OnFileSelected" accept=".png,.jpg,.jpeg,.bmp" />
+</div>
+
+@code {
+    private bool is_processing = false;
+    private int output_width = 100;
+    private string char_set = " .:-=+*#%@";
+    private string ascii_output = string.Empty;
+    private byte[]? current_image_bytes;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e) {
+        is_processing = true;
+        StateHasChanged();
+
+        var file = e.File;
+        using var stream = file.OpenReadStream(maxAllowedSize: 10_000_000);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        current_image_bytes = ms.ToArray();
+
+        await ConvertToAscii();
+
+        is_processing = false;
+    }
+
+    private async Task ConvertToAscii() 
+    {
+        if(current_image_bytes is null) return;
+
+        ascii_output = await AsciiConverterService.ConvertAsync(current_image_bytes, output_width, char_set);
+
+        await Task.CompletedTask;
+    }
+}
